@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kozhikode SS Item Tracker</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
+}
+
+body{
+background:#f4f6f9;
+padding:15px;
+}
+
+.container{
+max-width:1200px;
+margin:auto;
+}
+
+h1{
+text-align:center;
+color:#003366;
+margin-bottom:15px;
+}
+
+.card{
+background:white;
+padding:15px;
+border-radius:10px;
+margin-bottom:20px;
+box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+
+.card h2{
+margin-bottom:10px;
+color:#003366;
+}
+
+input,
+textarea,
+button{
+width:100%;
+padding:10px;
+margin-top:8px;
+border:1px solid #ccc;
+border-radius:6px;
+}
+
+button{
+background:#0078d4;
+color:white;
+font-weight:bold;
+cursor:pointer;
+border:none;
+}
+
+button:hover{
+background:#005ea6;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:8px;
+text-align:left;
+vertical-align:middle;
+}
+
+th{
+background:#0078d4;
+color:white;
+}
+
+.pending{
+color:red;
+font-weight:bold;
+}
+
+.received{
+color:green;
+font-weight:bold;
+}
+
+.item-photo{
+width:80px;
+height:80px;
+object-fit:cover;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+.action-btn{
+background:green;
+padding:8px;
+border:none;
+color:white;
+border-radius:5px;
+cursor:pointer;
+}
+
+.counter{
+display:flex;
+gap:10px;
+margin-bottom:15px;
+flex-wrap:wrap;
+}
+
+.box{
+flex:1;
+min-width:150px;
+padding:15px;
+border-radius:10px;
+color:white;
+text-align:center;
+font-size:18px;
+font-weight:bold;
+}
+
+.total{
+background:#0078d4;
+}
+
+.pendingbox{
+background:#dc3545;
+}
+
+.receivedbox{
+background:#28a745;
+}
+
+@media(max-width:768px){
+
+table,
+thead,
+tbody,
+th,
+td,
+tr{
+display:block;
+}
+
+thead{
+display:none;
+}
+
+tr{
+margin-bottom:12px;
+background:white;
+border:1px solid #ddd;
+padding:10px;
+border-radius:8px;
+}
+
+td{
+border:none;
+padding:5px;
+}
+
+.item-photo{
+width:100%;
+height:auto;
+}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>📦 Kozhikode SS Item Movement Tracker</h1>
+
+<div class="counter">
+<div class="box total">
+Total Sent<br>
+<span id="totalCount">0</span>
+</div>
+
+<div class="box pendingbox">
+Pending<br>
+<span id="pendingCount">0</span>
+</div>
+
+<div class="box receivedbox">
+Received<br>
+<span id="receivedCount">0</span>
+</div>
+</div>
+
+<div class="card">
+<h2>Add Dispatch Entry</h2>
+
+<input type="text" id="itemName" placeholder="Item Name">
+
+<input type="text" id="destination" placeholder="Sent To Station / Location">
+
+<input type="date" id="dispatchDate">
+
+<input type="text" id="outwardGatePass" placeholder="Outward Gate Pass No.">
+
+<input type="file" id="itemImage" accept="image/*">
+
+<textarea id="remarks" placeholder="Remarks"></textarea>
+
+<button onclick="addItem()">Add Entry</button>
+</div>
+
+<div class="card">
+<h2>Pending Items</h2>
+
+<table>
+<thead>
+<tr>
+<th>Photo</th>
+<th>Item</th>
+<th>Destination</th>
+<th>Dispatch Date</th>
+<th>Outward GP No.</th>
+<th>Remarks</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody id="pendingTable"></tbody>
+</table>
+</div>
+
+<div class="card">
+<h2>Received Items</h2>
+
+<table>
+<thead>
+<tr>
+<th>Photo</th>
+<th>Item</th>
+<th>Destination</th>
+<th>Dispatch Date</th>
+<th>Outward GP No.</th>
+<th>Received Date</th>
+<th>Receiving GP No.</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody id="receivedTable"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+
+let items =
+JSON.parse(localStorage.getItem("kozhikodeTracker")) || [];
+
+function saveData(){
+localStorage.setItem(
+"kozhikodeTracker",
+JSON.stringify(items)
+);
+}
+
+function clearForm(){
+
+document.getElementById("itemName").value="";
+document.getElementById("destination").value="";
+document.getElementById("dispatchDate").value="";
+document.getElementById("outwardGatePass").value="";
+document.getElementById("remarks").value="";
+document.getElementById("itemImage").value="";
+}
+
+function addItem(){
+
+let itemName =
+document.getElementById("itemName").value;
+
+let destination =
+document.getElementById("destination").value;
+
+let dispatchDate =
+document.getElementById("dispatchDate").value;
+
+let outwardGatePass =
+document.getElementById("outwardGatePass").value;
+
+let remarks =
+document.getElementById("remarks").value;
+
+let imageFile =
+document.getElementById("itemImage").files[0];
+
+if(
+itemName === "" ||
+destination === "" ||
+dispatchDate === ""
+){
+alert("Please fill mandatory fields.");
+return;
+}
+
+if(imageFile){
+
+let reader = new FileReader();
+
+reader.onload = function(e){
+
+items.push({
+id: Date.now(),
+itemName: itemName,
+destination: destination,
+dispatchDate: dispatchDate,
+outwardGatePass: outwardGatePass,
+remarks: remarks,
+status: "Pending",
+receivedDate: "",
+gatePassNo: "",
+image: e.target.result
+});
+
+saveData();
+renderData();
+clearForm();
+};
+
+reader.readAsDataURL(imageFile);
+
+}else{
+
+items.push({
+id: Date.now(),
+itemName: itemName,
+destination: destination,
+dispatchDate: dispatchDate,
+outwardGatePass: outwardGatePass,
+remarks: remarks,
+status: "Pending",
+receivedDate: "",
+gatePassNo: "",
+image: ""
+});
+
+saveData();
+renderData();
+clearForm();
+}
+}
+
+function markReceived(id){
+
+let item =
+items.find(x => x.id === id);
+
+if(item){
+
+let receivedDate = prompt(
+"Enter Received Date (DD-MM-YYYY)",
+new Date().toLocaleDateString("en-GB")
+);
+
+if(receivedDate === null) return;
+
+let gatePassNo = prompt(
+"Enter Receiving Gate Pass Number"
+);
+
+if(gatePassNo === null) return;
+
+item.status = "Received";
+item.receivedDate = receivedDate;
+item.gatePassNo = gatePassNo;
+
+saveData();
+renderData();
+}
+}
+
+function renderData(){
+
+let pendingTable =
+document.getElementById("pendingTable");
+
+let receivedTable =
+document.getElementById("receivedTable");
+
+pendingTable.innerHTML = "";
+receivedTable.innerHTML = "";
+
+let pendingCount = 0;
+let receivedCount = 0;
+
+items.forEach(item => {
+
+let imageHTML =
+item.image
+? `<img src="${item.image}" class="item-photo">`
+: `No Image`;
+
+if(item.status === "Pending"){
+
+pendingCount++;
+
+pendingTable.innerHTML += `
+<tr>
+<td>${imageHTML}</td>
+<td>${item.itemName}</td>
+<td>${item.destination}</td>
+<td>${item.dispatchDate}</td>
+<td>${item.outwardGatePass || ""}</td>
+<td>${item.remarks}</td>
+<td class="pending">Pending</td>
+<td>
+<button
+class="action-btn"
+onclick="markReceived(${item.id})">
+Mark Received
+</button>
+</td>
+</tr>
+`;
+
+}else{
+
+receivedCount++;
+
+receivedTable.innerHTML += `
+<tr>
+<td>${imageHTML}</td>
+<td>${item.itemName}</td>
+<td>${item.destination}</td>
+<td>${item.dispatchDate}</td>
+<td>${item.outwardGatePass || ""}</td>
+<td>${item.receivedDate}</td>
+<td>${item.gatePassNo}</td>
+<td class="received">✅ Received</td>
+</tr>
+`;
+}
+
+});
+
+document.getElementById("totalCount").innerText =
+items.length;
+
+document.getElementById("pendingCount").innerText =
+pendingCount;
+
+document.getElementById("receivedCount").innerText =
+receivedCount;
+}
+
+renderData();
+
+</script>
+
+</body>
+</html>
